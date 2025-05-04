@@ -23,7 +23,7 @@ namespace M_21_31.Logger
         // May be null; if it is, Log.Logger will be lazily used
         readonly Serilog.ILogger? _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly IM_21_31_LogEntry _logEntry;
+        private readonly IM_21_31_LoggerEntry _logEntry;
         readonly Action? _dispose;
 
         /// <summary>
@@ -31,7 +31,7 @@ namespace M_21_31.Logger
         /// </summary>
         /// <param name="logger">A Serilog logger to pipe events through; if null, the static <see cref="Log"/> class will be used.</param>
         /// <param name="dispose">If true, the provided logger or static log class will be disposed/closed when the provider is disposed.</param>
-        public M_21_31_LoggerProvider(Serilog.ILogger? logger = null, IHttpContextAccessor? httpContextAccessor = null, IM_21_31_LogEntry? logEntry = null, bool dispose = false)
+        public M_21_31_LoggerProvider(Serilog.ILogger? logger = null, IHttpContextAccessor? httpContextAccessor = null, IM_21_31_LoggerEntry? logEntry = null, bool dispose = false)
         {
             if (logger != null)
                 _logger = logger.ForContext(new[] { this });

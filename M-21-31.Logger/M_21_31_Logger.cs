@@ -12,6 +12,8 @@ using System.Linq;
 using System;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
+using System.Text;
+using M_21_31.Logger.Extensions;
 
 namespace M_21_31.Logger
 {
@@ -32,7 +34,7 @@ namespace M_21_31.Logger
         readonly M_21_31_LoggerProvider _provider;
         readonly Serilog.ILogger _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        IM_21_31_LogEntry _logEntry;
+        IM_21_31_LoggerEntry _logEntry;
 
         static readonly M_21_31_CachingMessageTemplateParser MessageTemplateParser = new M_21_31_CachingMessageTemplateParser();
 
@@ -45,7 +47,7 @@ namespace M_21_31.Logger
             M_21_31_LoggerProvider provider,
             Serilog.ILogger? logger = null,
             IHttpContextAccessor? httpContextAccessor = null,
-            IM_21_31_LogEntry? logEntry = null,
+            IM_21_31_LoggerEntry? logEntry = null,
             string? name = null)
         {
             _provider = provider ?? throw new ArgumentNullException(nameof(provider));
@@ -85,43 +87,122 @@ namespace M_21_31.Logger
             }
 
             var logEntry = new Dictionary<string, object>();
+            LogEvent? evt = null;
 
-            var message = formatter(state, exception);
-
-            if (_logEntry != null)
+            try
             {
-                if (!(state is Dictionary<string, object>))
+                if (_logEntry != null)
                 {
-                    logEntry = _logEntry.CreateEntry(GetEvent(eventId.Id),
-                        EventStatus.Success,
-                        message,
-                        exception);
+                    if (state is Dictionary<string, object> stateDictionary)
+                    {
+                        logEntry = _logEntry.CreateEntry(GetEvent(eventId.Id),
+                            EventStatus.Success,
+                            null,
+                            exception);
 
+                        foreach (var value in stateDictionary)
+                        {
+                            logEntry[value.Key] = value.Value;
+                        }
+                    }
+                    else if (state is IEnumerable<KeyValuePair<string, object>> stateValuePair)
+                    {
+                        logEntry = _logEntry.CreateEntry(GetEvent(eventId.Id),
+                            EventStatus.Success,
+                            (formatter != null ? formatter(state, null) : null),
+                            exception);
+
+                        if (formatter == null)
+                        {
+                            foreach (var value in stateValuePair)
+                            {
+                                logEntry[value.Key] = value.Value;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        logEntry = _logEntry.CreateEntry(GetEvent(eventId.Id),
+                            EventStatus.Success,
+                            (formatter != null ? formatter(state, null) : null),
+                            exception);
+                    }
+
+                    var originalFormatEntry = new StringBuilder();
+
+                    originalFormatEntry.Append("{{ ");
+
+                    originalFormatEntry.Append(string.Join(", ", logEntry.Select(e => "\"" + e.Key.Replace("@", "").Replace("$", "") + "\": {" +
+                        (e.Value?.GetType().GetTypeInfo().IsByRef ?? false ? "@" + e.Key :
+                        (e.Value?.GetType().GetTypeInfo().IsValueType ?? false ? "$" + e.Key : e.Key)) +
+                        "}")));
+
+                    originalFormatEntry.Append(", \"EventId\": {@EventId}");
+                    //originalFormatEntry.Append("\"{RequestId}\": {RequestId}, ");
+                    //originalFormatEntry.Append("\"{RequestPath}\": {RequestPath}, ");
+                    //originalFormatEntry.Append("\"{ConnectionId}\": {ConnectionId}, ");
+                    //originalFormatEntry.Append("\"{EnvironmentName}\": {EnvironmentName}, ");
+                    //originalFormatEntry.Append("\"{ProcessId}\": {ProcessId}, ");
+                    //originalFormatEntry.Append("\"{ThreadId}\": {ThreadId}");
+
+                    originalFormatEntry.Append(" }}");
+
+                    logEntry[M_21_31_LoggerProvider.OriginalFormatPropertyName] = originalFormatEntry.ToString();
+
+                    evt = PrepareWrite(level, eventId, logEntry, exception);
+                }
+                else
+                {
+                    evt = PrepareWrite(level, eventId, state, exception, formatter);
+                }
+            }
+            catch (Exception ex)
+            {
+                SelfLog.WriteLine($"Failed to write event through {nameof(M_21_31_Logger)}: {ex}");
+            }
+
+            // Do not swallow exceptions from here because Serilog takes care of them in case of WriteTo and throws them back to the caller in case of AuditTo.
+            if (evt != null)
+                _logger.Write(evt);
+        }
+
+        LogEvent PrepareWrite(LogEventLevel level, EventId eventId, object state, Exception? exception)
+        {
+            string? messageTemplate = null;
+
+            var properties = new List<LogEventProperty>();
+
+            if (state is IEnumerable<KeyValuePair<string, object>> structure)
+            {
+                foreach (var property in structure)
+                {
+                    if (property.Key == M_21_31_LoggerProvider.OriginalFormatPropertyName && property.Value is string value)
+                    {
+                        messageTemplate = value;
+                    }
+                    else if (property.Key.StartsWith("@"))
+                    {
+                        if (_logger.BindProperty(GetKeyWithoutFirstSymbol(DestructureDictionary, property.Key), property.Value, true, out var destructured))
+                            properties.Add(destructured);
+                    }
+                    else if (property.Key.StartsWith("$"))
+                    {
+                        if (_logger.BindProperty(GetKeyWithoutFirstSymbol(StringifyDictionary, property.Key), property.Value?.ToString(), true, out var stringified))
+                            properties.Add(stringified);
+                    }
+                    else
+                    {
+                        if (_logger.BindProperty(property.Key, property.Value, false, out var bound))
+                            properties.Add(bound);
+                    }
                 }
             }
 
-            //LogEvent? evt = null;
-            //try
-            //{
-            //    evt = PrepareWrite(level, eventId, state, exception, formatter);
-            //}
-            //catch (Exception ex)
-            //{
-            //    SelfLog.WriteLine($"Failed to write event through {nameof(M_21_31_Logger)}: {ex}");
-            //}
+            if (eventId.Id != 0 || eventId.Name != null)
+                properties.Add(CreateEventIdProperty(eventId));
 
-            //// Do not swallow exceptions from here because Serilog takes care of them in case of WriteTo and throws them back to the caller in case of AuditTo.
-            //if (evt != null)
-            //    _logger.Write(evt);
-
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            };
-            string jsonText = JsonSerializer.Serialize(logEntry, options);
-
-            _logger.Write(ConvertLevel(logLevel), jsonText, exception);
+            var parsedTemplate = MessageTemplateParser.Parse(messageTemplate ?? "");
+            return new LogEvent(DateTimeOffset.Now, level, exception, parsedTemplate, properties);
         }
 
         LogEvent PrepareWrite<TState>(LogEventLevel level, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -208,18 +289,26 @@ namespace M_21_31.Logger
         {
             var properties = new List<LogEventProperty>(2);
 
-            if (eventId.Id != 0)
+            if (!EnumValueExists<EventTypes>(eventId.Id))
             {
-                if (eventId.Id >= 0 && eventId.Id < LowEventIdValues.Length)
-                    // Avoid some allocations
-                    properties.Add(LowEventIdValues[eventId.Id]);
-                else
-                    properties.Add(new LogEventProperty("Id", new ScalarValue(eventId.Id)));
-            }
+                if (eventId.Id != 0)
+                {
+                    if (eventId.Id >= 0 && eventId.Id < LowEventIdValues.Length)
+                        // Avoid some allocations
+                        properties.Add(LowEventIdValues[eventId.Id]);
+                    else
+                        properties.Add(new LogEventProperty("Id", new ScalarValue(eventId.Id)));
+                }
 
-            if (eventId.Name != null)
+                if (eventId.Name != null)
+                {
+                    properties.Add(new LogEventProperty("Name", new ScalarValue(eventId.Name)));
+                }
+            }
+            else
             {
-                properties.Add(new LogEventProperty("Name", new ScalarValue(eventId.Name)));
+                properties.Add(new LogEventProperty("Id", new ScalarValue(eventId.Id)));
+                properties.Add(new LogEventProperty("Name", new ScalarValue(((EventTypes)eventId.Id).GetDescription())));
             }
 
             return new LogEventProperty("EventId", new StructureValue(properties));

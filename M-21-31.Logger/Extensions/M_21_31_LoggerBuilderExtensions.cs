@@ -28,11 +28,12 @@ namespace M_21_31.Logger.Extensions
             if (builder == null) throw new ArgumentNullException(nameof(builder));
 
             builder.Services.AddHttpContextAccessor();
-            builder.Services.AddTransient<IM_21_31_LogEntry, M_21_31_LogEntry>();
+            builder.Services.AddTransient<IM_21_31_LoggerEntry, M_21_31_LoggerEntry>();
+            builder.Services.AddTransient<IM_21_31_LoggerContext, M_21_31_LoggerContext>();
 
             var serviceProvider = builder.Services.BuildServiceProvider();
             var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-            var logEntry = serviceProvider.GetRequiredService<IM_21_31_LogEntry>();
+            var logEntry = serviceProvider.GetRequiredService<IM_21_31_LoggerEntry>();
 
             builder.ClearProviders();
 
@@ -54,7 +55,6 @@ namespace M_21_31.Logger.Extensions
         {
             var context = builder.ApplicationServices.GetRequiredService<IHttpContextAccessor>(); // resolve service
             var logger = builder.ApplicationServices.GetRequiredService<ILogger<T>>(); // resolve service
-            return app.UseMiddleware<RequestResponseLoggingMiddleware>(logger);
 
             return builder.UseMiddleware<M_21_31_HttpRequestLoggerMiddleware>();
         }

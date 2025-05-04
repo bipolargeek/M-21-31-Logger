@@ -11,7 +11,7 @@ namespace Microsoft.Extensions.Logging
         public static void LogEvent(this ILogger logger, 
             EventTypes eventType, 
             EventStatus eventStatus, 
-            string? message, 
+            object? message, 
             Exception? exception,
             string? commandExecuted,
             long? duration,
@@ -21,12 +21,12 @@ namespace Microsoft.Extensions.Logging
             Dictionary<string, object> logEntry = new Dictionary<string, object>();
 
             logEntry["EventType"] = eventType.GetDescription();
-            logEntry["EventStatusCode"] = eventStatus;
-            logEntry["EventId"] = eventType;
+            logEntry["EventTypeCode"] = (int)eventType;
+            logEntry["EventStatusCode"] = (int)eventStatus;
 
-            if (!string.IsNullOrEmpty(message))
+            if (message != null)
             {
-                logEntry["Message"] = message;
+                logEntry["@Message"] = message;
             }
             if (exception != null)
             {
@@ -42,21 +42,22 @@ namespace Microsoft.Extensions.Logging
             }
             if (!string.IsNullOrEmpty(requestBody))
             {
-                logEntry["HttpRequestBody"] = requestBody;
+                logEntry["RequestBody"] = requestBody;
             }
             if (!string.IsNullOrEmpty(responseBody))
             {
-                logEntry["HttpResponseBody"] = responseBody;
+                logEntry["ResponseBody"] = responseBody;
             }
 
-            logger.Log<Dictionary<string, object>>(LogLevel.Information, 
+            logger.Log<Dictionary<string, object>>(LogLevel.Information,
+                eventType,
                 logEntry,
                 exception);
         }
 
-        public static void Log<TState>(this ILogger logger, LogLevel logLevel, TState logEntry, Exception? exception)
+        public static void Log<TState>(this ILogger logger, LogLevel logLevel, EventTypes eventType, TState logEntry, Exception? exception)
         {
-            logger.Log<TState>(logLevel, 0, logEntry, exception, null);
+            logger.Log<TState>(logLevel,(int)eventType, logEntry, exception, null);
         }
     }
 }
