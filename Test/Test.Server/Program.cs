@@ -17,10 +17,8 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(configuration)
     .Enrich.FromLogContext()
     .Enrich.WithEnvironmentName()
-    .Enrich.WithMachineName()
     .Enrich.WithProcessId()
     .Enrich.WithThreadId()
-    .Enrich.WithAspNetCoreHttpContext()
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
