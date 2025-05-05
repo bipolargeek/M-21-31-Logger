@@ -32,7 +32,7 @@ namespace M_21_31.Logger.Middleware
             using var newBody = new MemoryStream();
             context.Response.Body = newBody;
 
-            _logger.LogEvent(EventTypes.Request,
+            _logger.LogEvent(EventType.Request,
                 EventStatus.Success,
                 null,
                 null,
@@ -47,7 +47,7 @@ namespace M_21_31.Logger.Middleware
             }
             catch (Exception ex)
             {
-                _logger.LogEvent(EventTypes.UnhandledException,
+                _logger.LogEvent(EventType.UnhandledException,
                     EventStatus.Fail,
                     null,
                     ex,
@@ -66,7 +66,7 @@ namespace M_21_31.Logger.Middleware
             newBody.Position = 0;
             await newBody.CopyToAsync(originalBody);
 
-            _logger.LogEvent(EventTypes.Response,
+            _logger.LogEvent(EventType.Response,
                 EventStatus.Success,
                 null,
                 null,

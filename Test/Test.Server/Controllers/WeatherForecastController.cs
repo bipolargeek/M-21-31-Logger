@@ -16,7 +16,7 @@ namespace Test.Server.Controllers
         public WeatherForecastController(ILogger<WeatherForecastController> logger)
         {
             _logger = logger;
-            _logger.LogEvent(M_21_31.Logger.EventTypes.Information,
+            _logger.LogEvent(M_21_31.Logger.EventType.Information,
                 M_21_31.Logger.EventStatus.Success,
                 "TEST",
                 null,

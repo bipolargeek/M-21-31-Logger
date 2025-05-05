@@ -40,40 +40,53 @@ namespace M_21_31.Logger
 
         public void BeginCapture()
         {
-        if (_context != null) {
-            var originalStream = _context.Response.Filter;
-            var captureStream = new MemoryStream();
+            try
+            {
+                if (_context?.Response != null)
+                {
+                    var originalStream = _context.Response.Filter;
+                    var captureStream = new MemoryStream();
 
-            _context.Items[OriginalStreamKey] = originalStream;
-            _context.Items[ResponseBodyKey] = captureStream;
-            _context.Response.Filter = captureStream;
+                    _context.Items[OriginalStreamKey] = originalStream;
+                    _context.Items[ResponseBodyKey] = captureStream;
+                    _context.Response.Filter = captureStream;
 
-            _context.Items[TransactionIdKey] = Guid.NewGuid().ToString();
-            _context.Items[StartTimeKey] = DateTime.UtcNow;
+                    _context.Items[TransactionIdKey] = Guid.NewGuid().ToString();
+                    _context.Items[StartTimeKey] = DateTime.UtcNow;
+                }
             }
+            catch { }
         }
 
         public void EndCapture()
         {
-            if (_context != null &&
+            try
+            {
+                if (_context != null &&
                 _context.Items[OriginalStreamKey] is Stream originalStream &&
                 _context.Items[ResponseBodyKey] is MemoryStream captureStream)
             {
                 captureStream.Position = 0;
                 captureStream.CopyTo(originalStream);
                 _context.Response.Filter = originalStream;
+                }
             }
+            catch { }
         }
 
         public async Task<string> GetResponseBody()
         {
-            if (_context != null &&
+            try
+            {
+                if (_context != null &&
                 _context.Items[ResponseBodyKey] is MemoryStream captureStream)
             {
                 captureStream.Position = 0;
                 using (var reader = new StreamReader(captureStream, _context.Response.ContentEncoding, true, 1024, leaveOpen: true))
                     return await reader.ReadToEndAsync();
             }
+        }
+            catch { }
             return null;
         }
 
@@ -100,25 +113,32 @@ namespace M_21_31.Logger
         public Dictionary<string, string> GetAllRequestHeaders()
         {
             var headers = new Dictionary<string, string>();
-            foreach (string key in _context.Request.Headers)
-                headers[key] = _context.Request.Headers[key];
+            if (_context?.Request != null)
+            {
+                foreach (string key in _context.Request.Headers)
+                    headers[key] = _context.Request.Headers[key];
+            }
             return headers;
         }
 
         public Dictionary<string, string> GetAllResponseHeaders()
         {
             var headers = new Dictionary<string, string>();
-            if (_context != null)
+            try
             {
-                foreach (string key in _context.Response.Headers)
-                    headers[key] = _context.Response.Headers[key];
+                if (_context?.Response != null)
+                {
+                    foreach (string key in _context.Response.Headers)
+                        headers[key] = _context.Response.Headers[key];
+                }
             }
+            catch { }
             return headers;
         }
 
         public async Task<string> GetRequestBody()
         {
-            if (_context != null)
+            if (_context?.Request != null)
             {
                 _context.Request.InputStream.Position = 0;
                 using (var reader = new StreamReader(_context.Request.InputStream, _context.Request.ContentEncoding))

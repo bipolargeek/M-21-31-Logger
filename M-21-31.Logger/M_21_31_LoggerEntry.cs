@@ -46,7 +46,7 @@ namespace M_21_31.Logger
         }
 #endif
 
-        public Dictionary<string, object> CreateEntry(EventTypes eventType,
+        public Dictionary<string, object> CreateEntry(EventType eventType,
             EventStatus eventStatus,
             object? message,
             Exception? exception)
@@ -54,7 +54,7 @@ namespace M_21_31.Logger
             var logEntry = new Dictionary<string, object>();
 
             logEntry["TimestampUTC"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
-            logEntry["TimestampUTC+4"] = DateTime.UtcNow.AddHours(4).ToString("yyyy-MM-ddTHH:mm:ss.fff+04:00", CultureInfo.InvariantCulture);
+            //logEntry["TimestampUTC+4"] = DateTime.UtcNow.AddHours(4).ToString("yyyy-MM-ddTHH:mm:ss.fff+04:00", CultureInfo.InvariantCulture);
             logEntry["EventType"] = eventType.GetDescription();
             logEntry["EventTypeCode"] = (int)eventType;
             logEntry["EventStatusCode"] = (int)eventStatus;
@@ -78,7 +78,7 @@ namespace M_21_31.Logger
             }
 
             if (message != null)
-                logEntry["@Message"] = message;
+                logEntry["Message"] = message;
 
             if (exception != null)
                 logEntry["Exception"] = exception.ToString();

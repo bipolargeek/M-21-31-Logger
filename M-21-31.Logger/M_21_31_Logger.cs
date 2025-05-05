@@ -289,7 +289,7 @@ namespace M_21_31.Logger
         {
             var properties = new List<LogEventProperty>(2);
 
-            if (!EnumValueExists<EventTypes>(eventId.Id))
+            if (!EnumValueExists<EventType>(eventId.Id))
             {
                 if (eventId.Id != 0)
                 {
@@ -308,19 +308,19 @@ namespace M_21_31.Logger
             else
             {
                 properties.Add(new LogEventProperty("Id", new ScalarValue(eventId.Id)));
-                properties.Add(new LogEventProperty("Name", new ScalarValue(((EventTypes)eventId.Id).GetDescription())));
+                properties.Add(new LogEventProperty("Name", new ScalarValue(((EventType)eventId.Id).GetDescription())));
             }
 
             return new LogEventProperty("EventId", new StructureValue(properties));
         }
 
-        private static EventTypes GetEvent(int eventId)
+        private static EventType GetEvent(int eventId)
         {
-            if (!EnumValueExists<EventTypes>(eventId))
+            if (!EnumValueExists<EventType>(eventId))
             {
-                return EventTypes.Information;
+                return EventType.Information;
             }
-            return (EventTypes)eventId;
+            return (EventType)eventId;
         }
 
         // Method to check if a value exists in an enum

@@ -9,7 +9,7 @@ namespace Microsoft.Extensions.Logging
     public static class LoggerExtensions
     {
         public static void LogEvent(this ILogger logger, 
-            EventTypes eventType, 
+            EventType eventType, 
             EventStatus eventStatus, 
             object? message, 
             Exception? exception,
@@ -55,7 +55,7 @@ namespace Microsoft.Extensions.Logging
                 exception);
         }
 
-        public static void Log<TState>(this ILogger logger, LogLevel logLevel, EventTypes eventType, TState logEntry, Exception? exception)
+        public static void Log<TState>(this ILogger logger, LogLevel logLevel, EventType eventType, TState logEntry, Exception? exception)
         {
             logger.Log<TState>(logLevel,(int)eventType, logEntry, exception, null);
         }

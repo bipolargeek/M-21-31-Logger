@@ -5,7 +5,7 @@ using System.Text;
 
 namespace M_21_31.Logger
 {
-    public enum EventTypes
+    public enum EventType
     {
         None = 0,
         [Description("Event Executed")]
@@ -20,6 +20,8 @@ namespace M_21_31.Logger
         Error = 203,
         [Description("Critical")]
         Critical = 204,
+        [Description("Fatal")]
+        Fatal = 205,
         [Description("User Authentication")]
         UserAuthentication = 102,
         [Description("Request")]
